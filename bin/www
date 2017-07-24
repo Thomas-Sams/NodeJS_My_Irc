@@ -1,0 +1,182 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var app = require('../app');
+var debug = require('debug')('myirc:server');
+var http = require('http');
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(process.env.PORT || '3000');
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+
+var server = http.createServer(app);
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+var io = require('socket.io').listen(server);
+
+/*
+* Liste des utilisateurs connecter
+*/
+var users = [];
+
+/**
+ * Historique des messages
+ */
+var messages = []; 
+
+io.sockets.on('connection', function(socket){
+  var loggedUser;
+
+  /**
+   * Déconnexion d'un utilisateur : broadcast d'un 'service-message'
+   */
+
+  socket.on('disconnect', function () {
+    if (loggedUser !== undefined) {
+      var serviceMessage = {
+        text: loggedUser.username + " s'est déconnecter",
+        type: 'logout'
+      };
+      socket.broadcast.emit('service-message', serviceMessage);
+      // Suppression du user de la liste des connecte
+      var userIndex = users.indexOf(loggedUser);
+      if (userIndex !== -1) {
+        users.splice(userIndex, 1);
+      }
+
+      io.emit('user-logout', loggedUser);
+    }
+  });
+
+  /**
+   * Connexion d'un utilisateur via le formulaire :
+   *  - sauvegarde du user
+   *  - broadcast d'un 'service-message'
+   */
+
+  socket.on('user-login', function (user, callback) {
+    // On verifie que l'user n'existe pas
+    var userIndex = -1;
+    for (i = 0; i < users.length; i++) {
+      if (users[i].username === user.username) {
+        userIndex = i;
+      }
+    }
+
+    for (i = 0; i < users.length; i++) {
+      socket.emit('user-login', users[i]);
+    }
+
+    if (user !== undefined && userIndex === -1) { // S'il est bien nouveau
+
+      // Sauvegarde de l'utilisateur et ajout à la liste des connectés
+      loggedUser = user;
+      users.push(loggedUser);
+
+      var userServiceMessage = {
+        text: 'Connecté en tant que ' + loggedUser.username,
+        type: 'login'
+      };
+
+      var broadcastedServiceMessage = {
+        text: loggedUser.username + ' vient de se connecter',
+        type: 'login'
+      };
+      
+      socket.emit('service-message', userServiceMessage);
+      socket.broadcast.emit('service-message', broadcastedServiceMessage);
+
+      io.emit('user-login', loggedUser);
+    }
+
+  for (i = 0; i < messages.length; i++) {
+    socket.emit('chat-message', messages[i]);
+  }
+
+    /**
+     * Réception de l'événement 'chat-message' et réémission vers tous les utilisateurs
+     */
+    socket.on('chat-message', function (message) {
+      message.username = loggedUser.username; // On intègre ici le nom d'utilisateur au message
+      io.emit('chat-message', message);
+    });
+  });
+
+
+});
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+  var addr = server.address();
+  var bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+}

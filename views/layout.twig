@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{{ title }}</title>
+    <link rel='stylesheet' href='/stylesheets/style.css' />
+  </head>
+  <body id="logged-out">
+    <header>
+      <div class="contain black topBotomBordersOut">
+          <a href="/">Accueil</a>
+        <div id="user">
+          {% if login is defined %}
+            <a href="/users/logout">Déconnexion</a>
+            <a href="/users/">Mon compte</a>
+          {% else %}
+            <a href="/users/login">Connexion</a>
+            <a href="/users/register">Inscription</a>
+          {% endif%}
+        </div>
+      </div>
+    </header>
+    <div id="container">
+      {% block body %}{% endblock %}
+    </div>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/javascripts/client.js"></script>
+  </body>
+</html>

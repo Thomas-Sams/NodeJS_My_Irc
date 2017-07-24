@@ -1,0 +1,25 @@
+{% extends 'layout.twig' %}
+
+{% block body %}
+	<h2 id="home">Bienvenue sur l'accueil du chat !</h2>
+	<div class="form-chat">
+	    <section id="chat">
+			<ul id="messages">
+			</ul>
+			<ul id="users"></ul>
+			<form action="">
+			<input type="textarea" id="m" placeholder="Entrez un message" autocomplete="off" />
+			<button>Envoyer</button>
+			</form>
+	    </section>
+	    <section id="login">
+	      <form action="">
+	        <label for="u">Username</label>
+	        <input id="u" autocomplete="off" autofocus />
+	        <p>
+	          <button>Login</button>
+	        </p>
+	      </form>
+	    </section>
+	</div>
+{% endblock %}
